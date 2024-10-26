@@ -1,0 +1,18 @@
+---
+- name: Setup DNS Sinkhole
+  hosts: all
+  become: yes
+  vars:
+    dns_sinkhole_ip: "{{ lookup('env', 'DNS_SINKHOLE_IP') }}"
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Setup DNS Sinkhole
+      lineinfile:
+        path: /etc/hosts
+        line: "{{ dns_sinkhole_ip }}    sinkhole.example.com"
+        state: present

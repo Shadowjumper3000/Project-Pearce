@@ -1,0 +1,91 @@
+---
+- name: Setup Nextcloud
+  hosts: all
+  become: yes
+  vars:
+    nextcloud_db_name: "{{ lookup('env', 'NEXTCLOUD_DB_NAME') }}"
+    nextcloud_db_user: "{{ lookup('env', 'DATABASE_USERNAME') }}"
+    nextcloud_db_password: "{{ lookup('env', 'DATABASE_PASSWORD') }}"
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install required packages
+      apt:
+        name:
+          - apache2
+          - mysql-server
+          - php
+          - php-mysql
+          - php-xml
+          - php-mbstring
+          - php-curl
+          - php-zip
+        state: present
+
+    - name: Setup MySQL database for Nextcloud
+      mysql_db:
+        name: "{{ nextcloud_db_name }}"
+        state: present
+
+    - name: Create Nextcloud database user
+      mysql_user:
+        name: "{{ nextcloud_db_user }}"
+        password: "{{ nextcloud_db_password }}"
+        priv: "{{ nextcloud_db_name }}.*:ALL"
+        state: present
+
+    - name: Download Nextcloud
+      get_url:
+        url: https://download.nextcloud.com/server/releases/nextcloud-22.2.0.zip
+        dest: /tmp/nextcloud.zip
+
+    - name: Unzip Nextcloud
+      unarchive:
+        src: /tmp/nextcloud.zip
+        dest: /var/www/html/
+        remote_src: yes
+
+    - name: Set permissions for Nextcloud
+      file:
+        path: /var/www/html/nextcloud
+        owner: www-data
+        group: www-data
+        mode: '0755'
+        recurse: yes
+
+    - name: Configure Apache for Nextcloud
+      copy:
+        dest: /etc/apache2/sites-available/nextcloud.conf
+        content: |
+          <VirtualHost *:80>
+              DocumentRoot /var/www/html/nextcloud
+              ServerName yourdomain.com
+
+              <Directory /var/www/html/nextcloud>
+                  Options +FollowSymlinks
+                  AllowOverride All
+                  Require all granted
+              </Directory>
+
+              ErrorLog ${APACHE_LOG_DIR}/nextcloud_error.log
+              CustomLog ${APACHE_LOG_DIR}/nextcloud_access.log combined
+          </VirtualHost>
+
+    - name: Enable Nextcloud site and rewrite module
+      command: a2ensite nextcloud.conf
+      notify: restart apache
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+
+  handlers:
+    - name: restart apache
+      service:
+        name: apache2
+        state: restarted

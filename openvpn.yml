@@ -1,0 +1,44 @@
+---
+- name: Setup OpenVPN
+  hosts: all
+  become: yes
+  vars:
+    openvpn_port: "{{ lookup('env', 'OPENVPN_PORT') }}"
+  
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    - name: Install OpenVPN
+      apt:
+        name: openvpn
+        state: present
+
+    - name: Generate OpenVPN static key
+      command: openvpn --genkey --secret /etc/openvpn/static.key
+
+    - name: Configure OpenVPN
+      copy:
+        dest: /etc/openvpn/server.conf
+        content: |
+          port {{ openvpn_port }}
+          proto udp
+          dev tun
+          secret static.key
+          ifconfig 10.8.0.1 10.8.0.2
+          keepalive 10 120
+          comp-lzo
+          user nobody
+          group nogroup
+          persist-key
+          persist-tun
+          status openvpn-status.log
+          verb 3
+
+    - name: Start OpenVPN service
+      service:
+        name: openvpn
+        state: started
+        enabled: yes
