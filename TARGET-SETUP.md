@@ -15,9 +15,9 @@ sudo apt install openssh-server
 ```
 
 ```sh
-ssh-keygen -t rsa -b 4096
+sudo apt install ansible
 ```
 
 ```sh
-ssh-copy-id your_username@192.168.1.10
+git clone https://github.com/Shadowjumper3000/Project-Pearce.git
 ```

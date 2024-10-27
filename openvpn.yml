@@ -1,10 +1,12 @@
 ---
-- name: Setup OpenVPN
-  hosts: all
+- name: Setup OpenVPN and Cloudflare Tunnel
+  hosts: openvpn
   become: yes
   vars:
-    openvpn_port: "{{ lookup('env', 'OPENVPN_PORT') }}"
-  
+    openvpn_port: 1194  # Default OpenVPN port
+    cloudflare_tunnel_name: "open_vpn"  # Name of the Cloudflare tunnel
+    cloudflare_domain: "shadowlabs.cc"     # Replace with your Cloudflare domain
+
   tasks:
     - name: Update and upgrade apt packages
       apt:
@@ -18,6 +20,8 @@
 
     - name: Generate OpenVPN static key
       command: openvpn --genkey --secret /etc/openvpn/static.key
+      args:
+        creates: /etc/openvpn/static.key  # Prevents running if the file already exists
 
     - name: Configure OpenVPN
       copy:
@@ -36,9 +40,52 @@
           persist-tun
           status openvpn-status.log
           verb 3
+    
+    - name: Create client configuration directory
+      file:
+        path: /etc/openvpn/client-configs
+        state: directory
+        mode: '0755'
+
+    - name: Generate client configuration
+      template:
+        src: client.ovpn.j2
+        dest: /etc/openvpn/client-configs/client.ovpn
 
     - name: Start OpenVPN service
       service:
         name: openvpn
         state: started
         enabled: yes
+
+    - name: Install cloudflared
+      apt:
+        name: cloudflared
+        state: present
+
+    - name: Authenticate cloudflared
+      command: cloudflared tunnel login
+      register: cloudflared_login
+      changed_when: "'Login successful' in cloudflared_login.stdout"
+
+    - name: Create Cloudflare Tunnel
+      command: cloudflared tunnel create {{ cloudflare_tunnel_name }}
+      register: tunnel_creation
+      changed_when: "'Tunnel created' in tunnel_creation.stdout"
+
+    - name: Configure Cloudflare Tunnel
+      copy:
+        dest: /root/.cloudflared/config.yml
+        content: |
+          tunnel: {{ tunnel_creation.stdout_lines[0] }}  # Tunnel ID from creation output
+          credentials-file: /root/.cloudflared/{{ tunnel_creation.stdout_lines[0] }}.json
+
+          ingress:
+            - hostname: {{ cloudflare_domain }}
+              service: tcp://localhost:{{ openvpn_port }}
+            - service: http_status:404
+
+    - name: Run Cloudflare Tunnel
+      command: cloudflared tunnel run {{ cloudflare_tunnel_name }}
+      async: 0
+      poll: 0
