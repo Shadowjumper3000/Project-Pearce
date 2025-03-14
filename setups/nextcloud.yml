@@ -4,10 +4,6 @@
   vars:
     nextcloud_container_name: nextcloud-aio-mastercontainer
     nextcloud_image: nextcloud/all-in-one:latest
-    cloudflare_tunnel_name: nextcloud
-    cloudflare_tunnel_credentials_file: "/home/{{ ansible_user }}/.cloudflared/{{ cloudflare_tunnel_name }}.json"
-    cloudflare_tunnel_config_file: "/home/{{ ansible_user }}/.cloudflared/config.yml"
-    cloudflare_domain: "nextcloud.shadowlabs.cc"
 
   tasks:
     - name: Update package list
@@ -44,48 +40,25 @@
           - nextcloud_aio_mastercontainer:/mnt/docker-aio-config
           - /var/run/docker.sock:/var/run/docker.sock:ro
 
-    - name: Install cloudflared
-      apt:
-        name: cloudflared
-        state: present
-
-    - name: Authenticate Cloudflare Tunnel
-      command: cloudflared tunnel login
-      register: cloudflare_login
-      changed_when: cloudflare_login.rc != 0
-
-    - name: Create Cloudflare Tunnel
-      command: cloudflared tunnel create {{ cloudflare_tunnel_name }}
-      register: cloudflare_tunnel
-      changed_when: cloudflare_tunnel.rc != 0
-
-    - name: Create Cloudflare Tunnel Configuration
-      copy:
-        dest: "{{ cloudflare_tunnel_config_file }}"
-        content: |
-          tunnel: {{ cloudflare_tunnel.stdout }}
-          credentials-file: {{ cloudflare_tunnel_credentials_file }}
-
-          ingress:
-            - hostname: {{ cloudflare_domain }}
-              service: http://localhost:8080
-            - service: http_status:404
-
-    - name: Start Cloudflare Tunnel
-      command: cloudflared tunnel run {{ cloudflare_tunnel_name }}
-      async: 10
-      poll: 0
-
-    - name: Open necessary ports on the firewall
+    - name: Open port 80 on the firewall
       ufw:
         rule: allow
-        name: "Open ports for Nextcloud and Cloudflare Tunnel"
-        port: 
-          - 80
-          - 8080
-          - 8443
-          - 3478
-          - "3478/udp"
+        port: 80
+        proto: tcp
+      when: ansible_os_family == "Debian"
+
+    - name: Open port 8080 on the firewall
+      ufw:
+        rule: allow
+        port: 8080
+        proto: tcp
+      when: ansible_os_family == "Debian"
+
+    - name: Open port 8443 on the firewall
+      ufw:
+        rule: allow
+        port: 8443
+        proto: tcp
       when: ansible_os_family == "Debian"
 
 # Post-Execution Instructions
@@ -99,6 +72,4 @@
           1. Verify that the Nextcloud container is running by executing: docker ps
           2. Access Nextcloud in your browser at http://localhost:8080
           3. Complete the Nextcloud setup wizard in your browser.
-          4. Verify that the Cloudflare Tunnel is running by executing: cloudflared tunnel list
-          5. Ensure that your domain (nextcloud.shadowlabs.cc) is correctly pointing to your Cloudflare Tunnel.
-          6. If you encounter any issues, check the logs for Docker and Cloudflare Tunnel for troubleshooting.
+          4. If you encounter any issues, check the logs for Docker for troubleshooting.

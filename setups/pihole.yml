@@ -1,0 +1,83 @@
+---
+- hosts: localhost
+  become: yes
+  vars:
+    pihole_password: ""  # Set a secure password for the Pi-hole web interface
+    pihole_interface: "wg0"  # Network interface Pi-hole will listen on
+    pihole_upstream_dns:  # Upstream DNS servers
+      - "8.8.8.8"
+      - "8.8.4.4"
+
+  tasks:
+    - name: Update package list
+      apt:
+        update_cache: yes
+
+    - name: Install dependencies
+      apt:
+        name:
+          - curl
+          - sudo
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+        state: present
+
+    - name: Download Pi-hole installation script
+      get_url:
+        url: https://install.pi-hole.net
+        dest: /tmp/pihole_install.sh
+        mode: '0755'
+
+    - name: Run Pi-hole installation script
+      command: bash /tmp/pihole_install.sh --unattended
+      environment:
+        PIHOLE_INTERFACE: "{{ pihole_interface }}"
+        IPV4_ADDRESS: "{{ ansible_default_ipv4.address }}"
+        IPV6_ADDRESS: "{{ ansible_default_ipv6.address | default('') }}"
+        PIHOLE_DNS_1: "{{ pihole_upstream_dns[0] }}"
+        PIHOLE_DNS_2: "{{ pihole_upstream_dns[1] }}"
+        WEBPASSWORD: "{{ pihole_password }}"
+
+    - name: Ensure Pi-hole is running
+      service:
+        name: pihole-FTL
+        state: started
+        enabled: yes
+
+    - name: Open port 53 for DNS
+      ufw:
+        rule: allow
+        port: 53
+        proto: tcp
+
+    - name: Open port 53 for DNS (UDP)
+      ufw:
+        rule: allow
+        port: 53
+        proto: udp
+
+    - name: Open port 80 for web interface
+      ufw:
+        rule: allow
+        port: 80
+        proto: tcp
+
+    - name: Open port 443 for web interface (if using HTTPS)
+      ufw:
+        rule: allow
+        port: 443
+        proto: tcp
+
+# Post-Execution Instructions
+- name: Post-Execution Instructions
+  hosts: localhost
+  tasks:
+    - name: Display post-execution instructions
+      debug:
+        msg: |
+          The playbook has completed successfully. Please follow these steps to finalize the setup:
+          1. Access the Pi-hole web interface in your browser at http://<your_server_ip>/admin
+          2. Log in using the password you set in the playbook.
+          3. Configure your devices to use the Pi-hole server as their DNS server.
+          4. If you encounter any issues, check the logs for Pi-hole for troubleshooting.
