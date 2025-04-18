@@ -1,0 +1,82 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "SpeedTest: Build for all platforms",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/speedtest && mkdir -p bin && GOOS=windows GOARCH=amd64 go build -o bin/speedtest-Wx86_64.exe speedtest.go && GOOS=windows GOARCH=386 go build -o bin/speedtest-Wx86.exe speedtest.go && GOOS=linux GOARCH=amd64 go build -o bin/speedtest-Lx86_64 speedtest.go && GOOS=linux GOARCH=386 go build -o bin/speedtest-Lx86 speedtest.go && GOOS=darwin GOARCH=amd64 go build -o bin/speedtest-Mx86_64 speedtest.go && GOOS=darwin GOARCH=arm64 go build -o bin/speedtest-Marm64 speedtest.go",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "SpeedTest: Build for Windows (amd64)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/speedtest && mkdir -p bin && GOOS=windows GOARCH=amd64 go build -ldflags -H=windowsgui -o bin/speedtest-Wx86_64.exe speedtest.go",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "SpeedTest: Build for Windows (x86)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/speedtest && mkdir -p bin && GOOS=windows GOARCH=386 go build -ldflags -H=windowsgui -o bin/speedtest-Wx86.exe speedtest.go",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "SpeedTest: Build for Linux (amd64)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/speedtest && mkdir -p bin && GOOS=linux GOARCH=amd64 go build -o bin/speedtest-Lx86_64 speedtest.go",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "SpeedTest: Build for Linux (x86)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/speedtest && mkdir -p bin && GOOS=linux GOARCH=386 go build -o bin/speedtest-Lx86 speedtest.go",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "SpeedTest: Build for macOS (amd64)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/speedtest && mkdir -p bin && GOOS=darwin GOARCH=amd64 go build -o bin/speedtest-Mx86_64 speedtest.go",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "SpeedTest: Build for macOS (arm64)",
+            "type": "shell",
+            "command": "cd ${workspaceFolder}/speedtest && mkdir -p bin && GOOS=darwin GOARCH=arm64 go build -o bin/speedtest-Marm64 speedtest.go",
+            "group": "build",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
